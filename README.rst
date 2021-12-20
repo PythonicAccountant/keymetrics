@@ -9,6 +9,9 @@ Key Metirics using SEC data
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
      :target: https://github.com/ambv/black
      :alt: Black code style
+.. image:: https://github.com/PythonicAccountant/keymetrics/actions/workflows/ci.yml/badge.svg
+    :target: https://github.com/PythonicAccountant/keymetrics/actions/workflows/ci.yml
+    :alt: workflow status
 
 :License: MIT
 
