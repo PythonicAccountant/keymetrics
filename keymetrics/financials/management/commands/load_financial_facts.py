@@ -1,11 +1,9 @@
-import json
-import urllib.request
-
 from dateutil import parser
 from django.core.management.base import BaseCommand
 from django.db.utils import IntegrityError
 
 from keymetrics.financials.models import (
+    Checksum,
     Company,
     Filing,
     FinancialConcept,
@@ -13,7 +11,11 @@ from keymetrics.financials.models import (
     TimeDimension,
 )
 
+from ._call_sec_api import get_sec_data
+from ._measure import measure
 
+
+@measure
 def fetch_sec_data():
     obs = Company.objects.filter(istracked=True)
     url_list = [c.sec_facts_url for c in obs]
@@ -22,17 +24,31 @@ def fetch_sec_data():
 
 
 def save_new_data(url):
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", "Danny Arguello postman@keymetrics.cloud")
-    r = urllib.request.urlopen(req)
-    data = json.load(r)
+    resp = get_sec_data(url)
+    data = resp["data"]
+    new_checksum = resp["checksum"]
     gaap_data = data["facts"]["us-gaap"]
     cik = data["cik"]
-    save_new_financial_concepts(gaap_data)
-    save_new_time_dimensions(gaap_data)
-    save_new_financial_facts(gaap_data=gaap_data, cik=cik)
+    company = Company.objects.get(CIK=cik)
+    try:
+        stored_checksum = Checksum.objects.get(
+            company=company, api_type=Checksum.TYPE_FACTS
+        )
+        stored_checksum = stored_checksum.checksum
+    except Checksum.DoesNotExist:
+        stored_checksum = None
+    if new_checksum != stored_checksum:
+        save_new_financial_concepts(gaap_data)
+        save_new_time_dimensions(gaap_data)
+        save_new_financial_facts(gaap_data=gaap_data, company=company)
+        Checksum.objects.update_or_create(
+            company=company,
+            api_type=Checksum.TYPE_FACTS,
+            defaults={"checksum": new_checksum},
+        )
 
 
+@measure
 def save_new_financial_concepts(gaap_data):
     for key, value in gaap_data.items():
         if not FinancialConcept.objects.filter(tag=key).exists():
@@ -58,7 +74,12 @@ def save_new_financial_concepts(gaap_data):
                 concept.save()
 
 
+@measure
 def save_new_time_dimensions(gaap_data):
+    existing_dimensions = TimeDimension.objects.all()
+    existing_dimensions = [t.key for t in existing_dimensions]
+
+    obj_list = []
     for key, value in gaap_data.items():
         for unit, instance in value["units"].items():
             for entries in instance:
@@ -74,17 +95,27 @@ def save_new_time_dimensions(gaap_data):
                     start = None
                     end = parser.parse(entries["end"])
                     key = entries["end"]
-                if not TimeDimension.objects.filter(key=key).exists():
+                if key not in existing_dimensions:
                     time_dimension = TimeDimension(
                         key=key,
                         start_date=start,
                         end_date=end,
                         months=num_months,
                     )
-                    time_dimension.save()
+                    existing_dimensions.append(key)
+                    obj_list.append(time_dimension)
+    TimeDimension.objects.bulk_create(obj_list, ignore_conflicts=True)
 
 
-def save_new_financial_facts(gaap_data, cik):
+@measure
+def save_new_financial_facts(gaap_data, company):
+    existing_facts = FinancialFact.objects.select_related("filing").filter(
+        company=company
+    )
+    existing_filings = [f.filing.accn_num for f in existing_facts]
+    filings = Filing.objects.filter(company=company)
+    concepts = FinancialConcept.objects.all()
+    time_dimensions = TimeDimension.objects.all()
     obj_list = []
     for key, value in gaap_data.items():
         for unit, instance in value["units"].items():
@@ -100,18 +131,18 @@ def save_new_financial_facts(gaap_data, cik):
                     start = None
                     end = parser.parse(entries["end"])
                     time_key = entries["end"]
-                filing = Filing.objects.get(accn_num=entries["accn"])
-                company = Company.objects.get(CIK=cik)
-                concept = FinancialConcept.objects.get(tag=key)
-                period = TimeDimension.objects.get(key=time_key)
-                obj = FinancialFact(
-                    company=company,
-                    filing=filing,
-                    concept=concept,
-                    period=period,
-                    value=int(entries["val"]),
-                )
-                obj_list.append(obj)
+                filing = filings.get(accn_num=entries["accn"])
+                concept = concepts.get(tag=key)
+                period = time_dimensions.get(key=time_key)
+                if entries["accn"] not in existing_filings:
+                    obj = FinancialFact(
+                        company=company,
+                        filing=filing,
+                        concept=concept,
+                        period=period,
+                        value=int(entries["val"]),
+                    )
+                    obj_list.append(obj)
     FinancialFact.objects.bulk_create(obj_list, ignore_conflicts=True)
 
 

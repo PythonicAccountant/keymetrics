@@ -1,9 +1,9 @@
-import json
-import urllib.request
-
 from django.core.management.base import BaseCommand
 
-from keymetrics.financials.models import Company, Filing
+from keymetrics.financials.models import Checksum, Company, Filing
+
+from ._call_sec_api import get_sec_data
+from ._measure import measure
 
 
 def fetch_sec_data():
@@ -13,17 +13,47 @@ def fetch_sec_data():
         save_new_filing(url)
 
 
+@measure
 def save_new_filing(url):
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", "Danny Arguello postman@keymetrics.cloud")
-    r = urllib.request.urlopen(req)
-    data = json.load(r)
+    resp = get_sec_data(url)
+    data = resp["data"]
+    new_checksum = resp["checksum"]
     cik = data["cik"]
     company = Company.objects.get(CIK=cik)
-    form_list = data["filings"]["recent"]["form"]
-    report_date_list = data["filings"]["recent"]["reportDate"]
-    filing_date_list = data["filings"]["recent"]["filingDate"]
-    accn_list = data["filings"]["recent"]["accessionNumber"]
+    filing_data = data["filings"]["recent"]
+    extra_files = False
+    if data["filings"]["files"]:
+        extra_files = True
+    try:
+        stored_checksum = Checksum.objects.get(
+            company=company, api_type=Checksum.TYPE_SUBMISSIONS
+        )
+        stored_checksum = stored_checksum.checksum
+    except Checksum.DoesNotExist:
+        stored_checksum = None
+    if new_checksum != stored_checksum:
+        process_submissions(company=company, filing_data=filing_data)
+        Checksum.objects.update_or_create(
+            company=company,
+            api_type=Checksum.TYPE_SUBMISSIONS,
+            defaults={"checksum": new_checksum},
+        )
+
+        if extra_files:
+            extra_file_list = data["filings"]["files"]
+            file_names = [x["name"] for x in extra_file_list]
+            for file in file_names:
+                url = "https://data.sec.gov/submissions/" + file
+                resp = get_sec_data(url)
+                data = resp["data"]
+                process_submissions(company=company, filing_data=data)
+
+
+def process_submissions(company, filing_data):
+    form_list = filing_data["form"]
+    report_date_list = filing_data["reportDate"]
+    filing_date_list = filing_data["filingDate"]
+    accn_list = filing_data["accessionNumber"]
     indices = [
         i for i, x in enumerate(form_list) if x in ["10-K", "10-Q", "10-K/A", "10-Q/A"]
     ]
