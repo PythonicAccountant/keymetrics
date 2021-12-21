@@ -1,4 +1,5 @@
 # General
 # ------------------------------------------------------------------------------
+SEC_API_USER_AGENT="Danny Arguello postman@keymetrics.cloud"
 USE_DOCKER=yes
 IPYTHONDIR=/app/.ipython

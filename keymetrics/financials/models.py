@@ -1,11 +1,13 @@
+import hashlib
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
-    ticker = models.CharField(unique=True, max_length=10)
-    CIK = models.IntegerField()
+    ticker = models.CharField(max_length=20)
+    CIK = models.IntegerField(unique=True)
     istracked = models.BooleanField(default=False)
 
     class Meta:
@@ -106,7 +108,7 @@ class FinancialFact(models.Model):
     value = models.BigIntegerField()
 
     def __str__(self):
-        return f"{self.concept} - {self.period}"
+        return f"{self.company} - {self.concept} - {self.period}"
 
     class Meta:
         constraints = [
@@ -115,3 +117,38 @@ class FinancialFact(models.Model):
                 name="unique financial fact",
             )
         ]
+
+
+class Checksum(models.Model):
+    TYPE_SUBMISSIONS = "S"
+    TYPE_FACTS = "F"
+
+    TYPE_CHOICES = [
+        (TYPE_SUBMISSIONS, "Submission API"),
+        (TYPE_FACTS, "Fact API"),
+    ]
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="checksums"
+    )
+    api_type = models.CharField(choices=TYPE_CHOICES, max_length=1)
+    checksum = models.CharField(max_length=100)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "api_type"],
+                name="unique type api per company",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.company} - {self.get_api_type_display()}"
+
+    @staticmethod
+    def generate_md5(data):
+        """
+
+        :param data: Raw Content from request object
+        :return: checksum
+        """
+        return hashlib.md5(data).hexdigest()

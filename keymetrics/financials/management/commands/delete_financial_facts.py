@@ -1,10 +1,10 @@
 from django.core.management.base import BaseCommand
 
-from keymetrics.financials.models import FinancialFact
+from keymetrics.financials.models import Company
 
 
 def delete_data():
-    FinancialFact.objects.all().delete()
+    Company.objects.all().delete()
 
 
 class Command(BaseCommand):
