@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from keymetrics.financials.models import Company, TimeDimension
+from keymetrics.financials.models import TimeDimension
 
 
 def delete_data():
