@@ -4,16 +4,22 @@ import keymetrics.financials.models as m
 
 admin.site.register(m.TimeDimension)
 
+class TickerInline(admin.StackedInline):
+    model = m.Ticker
+    readonly_fields = ['ticker']
 
 @admin.register(m.Company)
 class CompanyAdmin(admin.ModelAdmin):
     list_filter = ("istracked",)
-    search_fields = ["ticker", "name"]
+    search_fields = ["tickers__ticker", "name"]
     readonly_fields = ["sec_submissions_url", "sec_facts_url"]
     fieldsets = (
-        (None, {"fields": ("name", "ticker", "CIK", "istracked")}),
+        (None, {"fields": ("name", "CIK", "istracked")}),
         ("SEC URLS", {"fields": ("sec_submissions_url", "sec_facts_url")}),
     )
+    inlines = [
+        TickerInline
+    ]
 
 
 @admin.register(m.FinancialConcept)

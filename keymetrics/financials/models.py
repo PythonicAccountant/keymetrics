@@ -6,7 +6,6 @@ from django.utils.translation import gettext_lazy as _
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
-    ticker = models.CharField(max_length=20)
     CIK = models.IntegerField(unique=True)
     istracked = models.BooleanField(default=False)
 
@@ -14,7 +13,7 @@ class Company(models.Model):
         verbose_name_plural = "companies"
 
     def __str__(self):
-        return f"{self.ticker} - {self.name}"
+        return f"{self.name} {self.tickers.paren_ticker_list}"
 
     @property
     def zero_padded_cik(self):
@@ -35,6 +34,20 @@ class Company(models.Model):
             f"https://data.sec.gov/api/xbrl/companyfacts/CIK{self.zero_padded_cik}.json"
         )
 
+class TickerManager(models.Manager):
+    @property
+    def paren_ticker_list(self):
+        return str(list(self.values_list('ticker', flat=True))).replace("[", "(").replace("]", ")").replace("'", "")
+
+
+
+class Ticker(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='tickers')
+    ticker = models.CharField(max_length=20, unique=True)
+    objects = TickerManager()
+
+    def __str__(self):
+        return self.ticker
 
 class Filing(models.Model):
     TYPE_10Q = "10-Q"
@@ -148,7 +161,7 @@ class Checksum(models.Model):
     def generate_md5(data):
         """
 
-        :param data: Raw Content from request object
-        :return: checksum
+        :param data: Raw Content (JSON) from request object
+        :return: MD5 checksum
         """
         return hashlib.md5(data).hexdigest()
