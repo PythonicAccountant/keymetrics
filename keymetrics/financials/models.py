@@ -93,7 +93,7 @@ class FinancialConcept(models.Model):
 
 
 class TimeDimension(models.Model):
-    key = models.CharField(max_length=50, unique=True)
+    key = models.CharField(max_length=255, unique=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField()
     months = models.IntegerField(null=True, blank=True)

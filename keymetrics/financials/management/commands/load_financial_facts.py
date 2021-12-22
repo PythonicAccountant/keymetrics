@@ -83,24 +83,13 @@ def save_new_time_dimensions(gaap_data):
     for key, value in gaap_data.items():
         for unit, instance in value["units"].items():
             for entries in instance:
-                num_months = None
-                if "start" in entries:
-                    start = parser.parse(entries["start"])
-                    end = parser.parse(entries["end"])
-                    num_months = (
-                        (end.year - start.year) * 12 + (end.month - start.month) + 1
-                    )
-                    key = entries["start"] + entries["end"] + str(num_months)
-                else:
-                    start = None
-                    end = parser.parse(entries["end"])
-                    key = entries["end"]
-                if key not in existing_dimensions:
+                dates = process_dates(entries)
+                if dates["time_key"] not in existing_dimensions:
                     time_dimension = TimeDimension(
-                        key=key,
-                        start_date=start,
-                        end_date=end,
-                        months=num_months,
+                        key=dates["time_key"],
+                        start_date=dates["start"],
+                        end_date=dates["end"],
+                        months=dates["num_months"],
                     )
                     existing_dimensions.append(key)
                     obj_list.append(time_dimension)
@@ -116,24 +105,15 @@ def save_new_financial_facts(gaap_data, company):
     filings = Filing.objects.filter(company=company)
     concepts = FinancialConcept.objects.all()
     time_dimensions = TimeDimension.objects.all()
+
     obj_list = []
     for key, value in gaap_data.items():
         for unit, instance in value["units"].items():
             for entries in instance:
-                if "start" in entries:
-                    start = parser.parse(entries["start"])
-                    end = parser.parse(entries["end"])
-                    num_months = (
-                        (end.year - start.year) * 12 + (end.month - start.month) + 1
-                    )
-                    time_key = entries["start"] + entries["end"] + str(num_months)
-                else:
-                    start = None
-                    end = parser.parse(entries["end"])
-                    time_key = entries["end"]
+                dates = process_dates(entries)
                 filing = filings.get(accn_num=entries["accn"])
                 concept = concepts.get(tag=key)
-                period = time_dimensions.get(key=time_key)
+                period = time_dimensions.get(key=dates["time_key"])
                 if entries["accn"] not in existing_filings:
                     obj = FinancialFact(
                         company=company,
@@ -144,6 +124,22 @@ def save_new_financial_facts(gaap_data, company):
                     )
                     obj_list.append(obj)
     FinancialFact.objects.bulk_create(obj_list, ignore_conflicts=True)
+
+
+def process_dates(data):
+    start = None
+    num_months = None
+    end = data["end"]
+
+    if "start" in data:
+        start_dt = parser.parse(data["start"])
+        end_dt = parser.parse(data["end"])
+        num_months = round(((end_dt - start_dt).days)/30.4)
+        time_key = data["start"] + data["end"] + str(num_months)
+        start = data["start"]
+    else:
+        time_key = end
+    return {"start": start, "end": end, "time_key": time_key, "num_months": num_months}
 
 
 class Command(BaseCommand):
