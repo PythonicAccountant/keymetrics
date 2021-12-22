@@ -22,23 +22,17 @@ def save_company_data():
     Company.objects.bulk_create(objs_list, ignore_conflicts=True)
     save_ticker_data(data=data)
 
+
 def save_ticker_data(data):
     companies = Company.objects.all()
 
     objs_list = []
     for key, value in data.items():
         obj = Ticker(
-            company=companies.get(CIK=int(value["cik_str"])),
-            ticker=value["ticker"]
+            company=companies.get(CIK=int(value["cik_str"])), ticker=value["ticker"]
         )
         objs_list.append(obj)
     Ticker.objects.bulk_create(objs_list, ignore_conflicts=True)
-
-
-
-
-
-
 
 
 class Command(BaseCommand):

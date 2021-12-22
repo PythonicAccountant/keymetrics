@@ -134,7 +134,7 @@ def process_dates(data):
     if "start" in data:
         start_dt = parser.parse(data["start"])
         end_dt = parser.parse(data["end"])
-        num_months = round(((end_dt - start_dt).days)/30.4)
+        num_months = round(((end_dt - start_dt).days) / 30.4)
         time_key = data["start"] + data["end"] + str(num_months)
         start = data["start"]
     else:
