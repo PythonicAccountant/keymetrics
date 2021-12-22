@@ -4,9 +4,11 @@ import keymetrics.financials.models as m
 
 admin.site.register(m.TimeDimension)
 
+
 class TickerInline(admin.StackedInline):
     model = m.Ticker
-    readonly_fields = ['ticker']
+    readonly_fields = ["ticker"]
+
 
 @admin.register(m.Company)
 class CompanyAdmin(admin.ModelAdmin):
@@ -17,9 +19,7 @@ class CompanyAdmin(admin.ModelAdmin):
         (None, {"fields": ("name", "CIK", "istracked")}),
         ("SEC URLS", {"fields": ("sec_submissions_url", "sec_facts_url")}),
     )
-    inlines = [
-        TickerInline
-    ]
+    inlines = [TickerInline]
 
 
 @admin.register(m.FinancialConcept)
