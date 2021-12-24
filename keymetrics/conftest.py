@@ -1,5 +1,11 @@
 import pytest
 
+from keymetrics.financials.tests.factories import (
+    CompanyFactory,
+    FilingFactory,
+    FinancialConcept,
+    TickerFactory,
+)
 from keymetrics.users.models import User
 from keymetrics.users.tests.factories import UserFactory
 
@@ -12,6 +18,26 @@ def media_storage(settings, tmpdir):
 @pytest.fixture
 def user() -> User:
     return UserFactory()
+
+
+@pytest.fixture
+def company():
+    return CompanyFactory()
+
+
+@pytest.fixture
+def ticker():
+    return TickerFactory()
+
+
+@pytest.fixture
+def financialconcept():
+    return FinancialConcept()
+
+
+@pytest.fixture
+def filing():
+    return FilingFactory()
 
 
 @pytest.fixture(autouse=True)
