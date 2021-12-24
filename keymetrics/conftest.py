@@ -12,3 +12,9 @@ def media_storage(settings, tmpdir):
 @pytest.fixture
 def user() -> User:
     return UserFactory()
+
+
+@pytest.fixture(autouse=True)
+def no_requests(monkeypatch):
+    """Remove requests.sessions.Session.request for all tests."""
+    monkeypatch.delattr("requests.sessions.Session.request")
