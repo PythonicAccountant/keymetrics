@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from keymetrics.financials.models import Company
+from keymetrics.financials.models import Company, Ticker
 
 
 def reset_tracked_companies():
@@ -10,11 +10,12 @@ def reset_tracked_companies():
     Company.objects.bulk_update(obs, ["istracked"])
 
 
-def update_tracked_companies(tracked_companies_list):
-    obs = [Company.objects.get(ticker=t) for t in tracked_companies_list]
-    for company in obs:
+def update_tracked_companies(tracked_companies_list: list[str]):
+    ticker_list = [Ticker.objects.get(ticker=t) for t in tracked_companies_list]
+    company_list = [t.company for t in ticker_list]
+    for company in company_list:
         company.istracked = True
-    Company.objects.bulk_update(obs, ["istracked"])
+    Company.objects.bulk_update(company_list, ["istracked"])
 
 
 class Command(BaseCommand):

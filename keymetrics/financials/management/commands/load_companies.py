@@ -23,7 +23,7 @@ def save_company_data():
     save_ticker_data(data=data)
 
 
-def save_ticker_data(data):
+def save_ticker_data(data: dict):
     companies = Company.objects.all()
 
     objs_list = []

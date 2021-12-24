@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import requests
 from pyrate_limiter import Duration, Limiter, RequestRate
@@ -10,7 +11,7 @@ limiter = Limiter(RequestRate(10, Duration.SECOND))
 
 
 @limiter.ratelimit("SEC", delay=True)
-def get_sec_data(url: str):
+def get_sec_data(url: str) -> Optional[dict]:
 
     try:
         headers = {"User-Agent": env("SEC_API_USER_AGENT")}
@@ -27,3 +28,4 @@ def get_sec_data(url: str):
         logging.critical(errt, exc_info=True)
     except requests.exceptions.RequestException as err:
         logging.critical(err, exc_info=True)
+    return None

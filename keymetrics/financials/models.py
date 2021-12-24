@@ -37,7 +37,7 @@ class Company(models.Model):
 
 class TickerManager(models.Manager):
     @property
-    def paren_ticker_list(self):
+    def paren_ticker_list(self) -> str:
         return (
             str(list(self.values_list("ticker", flat=True)))
             .replace("[", "(")
@@ -114,6 +114,8 @@ class TimeDimension(models.Model):
 
 
 class FinancialFact(models.Model):
+    """ """
+
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="financial_facts"
     )
@@ -141,6 +143,12 @@ class FinancialFact(models.Model):
 
 
 class Checksum(models.Model):
+    """
+    Model to store the MD5 checksum value of each API call for each Company.
+    Using MD5 for speed not used for any security purpose.
+
+    """
+
     TYPE_SUBMISSIONS = "S"
     TYPE_FACTS = "F"
 
@@ -166,10 +174,11 @@ class Checksum(models.Model):
         return f"{self.company} - {self.get_api_type_display()}"
 
     @staticmethod
-    def generate_md5(data):
+    def generate_md5(data) -> str:
         """
+        Generates MD5 checksum given JSON data
 
         :param data: Raw Content (JSON) from request object
-        :return: MD5 checksum
+        :return: MD5 checksum string
         """
         return hashlib.md5(data).hexdigest()

@@ -12,6 +12,7 @@ from keymetrics.financials.models import (
 )
 
 from ._call_sec_api import get_sec_data
+from ._checksum_checker import checksum_checker
 from ._measure import measure
 
 
@@ -23,37 +24,29 @@ def fetch_sec_data():
         save_new_data(url)
 
 
-def save_new_data(url):
+def save_new_data(url: str):
     resp = get_sec_data(url)
     data = resp["data"]
-    new_checksum = resp["checksum"]
+    current_checksum = resp["checksum"]
     gaap_data = data["facts"]["us-gaap"]
     cik = data["cik"]
     company = Company.objects.get(CIK=cik)
-    try:
-        stored_checksum = Checksum.objects.get(
-            company=company, api_type=Checksum.TYPE_FACTS
-        )
-        stored_checksum = stored_checksum.checksum
-    except Checksum.DoesNotExist:
-        stored_checksum = None
-    if new_checksum != stored_checksum:
+
+    checksum_match = checksum_checker(
+        current_checksum=current_checksum, company=company, api_type=Checksum.TYPE_FACTS
+    )
+    if not checksum_match:
         save_new_financial_concepts(gaap_data)
         save_new_time_dimensions(gaap_data)
         save_new_financial_facts(gaap_data=gaap_data, company=company)
-        Checksum.objects.update_or_create(
-            company=company,
-            api_type=Checksum.TYPE_FACTS,
-            defaults={"checksum": new_checksum},
-        )
 
 
 @measure
-def save_new_financial_concepts(gaap_data):
+def save_new_financial_concepts(gaap_data: dict):
     for key, value in gaap_data.items():
         if not FinancialConcept.objects.filter(tag=key).exists():
             for unit, instance in value["units"].items():
-                concept_type = None
+                concept_type = ""
                 for entries in instance:
                     if "start" in entries:
                         concept_type = FinancialConcept.TYPE_PERIOD_ENDED
@@ -75,29 +68,29 @@ def save_new_financial_concepts(gaap_data):
 
 
 @measure
-def save_new_time_dimensions(gaap_data):
-    existing_dimensions = TimeDimension.objects.all()
-    existing_dimensions = [t.key for t in existing_dimensions]
+def save_new_time_dimensions(gaap_data: dict):
+    existing_dimensions_objs = TimeDimension.objects.all()
+    existing_dimensions_key_list = [t.key for t in existing_dimensions_objs]
 
     obj_list = []
     for key, value in gaap_data.items():
         for unit, instance in value["units"].items():
             for entries in instance:
                 dates = process_dates(entries)
-                if dates["time_key"] not in existing_dimensions:
+                if dates["time_key"] not in existing_dimensions_key_list:
                     time_dimension = TimeDimension(
                         key=dates["time_key"],
                         start_date=dates["start"],
                         end_date=dates["end"],
                         months=dates["num_months"],
                     )
-                    existing_dimensions.append(key)
+                    existing_dimensions_key_list.append(key)
                     obj_list.append(time_dimension)
     TimeDimension.objects.bulk_create(obj_list, ignore_conflicts=True)
 
 
 @measure
-def save_new_financial_facts(gaap_data, company):
+def save_new_financial_facts(gaap_data: dict, company: Company):
     existing_facts = FinancialFact.objects.select_related("filing").filter(
         company=company
     )
@@ -126,7 +119,7 @@ def save_new_financial_facts(gaap_data, company):
     FinancialFact.objects.bulk_create(obj_list, ignore_conflicts=True)
 
 
-def process_dates(data):
+def process_dates(data: dict) -> dict:
     start = None
     num_months = None
     end = data["end"]

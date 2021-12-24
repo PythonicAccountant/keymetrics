@@ -10,6 +10,8 @@ mypy==0.910  # https://github.com/python/mypy
 django-stubs==1.9.0  # https://github.com/typeddjango/django-stubs
 pytest==6.2.5  # https://github.com/pytest-dev/pytest
 pytest-sugar==0.9.4  # https://github.com/Frozenball/pytest-sugar
+types-requests==2.26.2
+types-python-dateutil==2.8.3
 
 # Documentation
 # ------------------------------------------------------------------------------

@@ -2,6 +2,7 @@ from factory import Faker, SubFactory
 from factory.django import DjangoModelFactory
 
 from keymetrics.financials.models import (
+    Checksum,
     Company,
     Filing,
     FinancialConcept,
@@ -78,3 +79,12 @@ class FinancialFactFactory(DjangoModelFactory):
     concept = SubFactory(FinancialConceptFactory)
     period = SubFactory(TimeDimensionFactory)
     value = Faker("pyint", min_value=1, max_value=10000000)
+
+
+class ChecksumFactory(DjangoModelFactory):
+    class Meta:
+        model = Checksum
+
+    company = SubFactory(CompanyFactory)
+    api_type = Faker("random_choices", elements=["F", "S"], length=1)
+    checksum = Faker("pyint", min_value=1, max_value=100000)

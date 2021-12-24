@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from keymetrics.financials.models import Checksum, Company, Filing
 
 from ._call_sec_api import get_sec_data
+from ._checksum_checker import checksum_checker
 from ._measure import measure
 
 
@@ -14,30 +15,24 @@ def fetch_sec_data():
 
 
 @measure
-def save_new_filing(url):
+def save_new_filing(url: str):
     resp = get_sec_data(url)
     data = resp["data"]
-    new_checksum = resp["checksum"]
+    current_checksum = resp["checksum"]
     cik = data["cik"]
     company = Company.objects.get(CIK=cik)
     filing_data = data["filings"]["recent"]
     extra_files = False
     if data["filings"]["files"]:
         extra_files = True
-    try:
-        stored_checksum = Checksum.objects.get(
-            company=company, api_type=Checksum.TYPE_SUBMISSIONS
-        )
-        stored_checksum = stored_checksum.checksum
-    except Checksum.DoesNotExist:
-        stored_checksum = None
-    if new_checksum != stored_checksum:
+
+    checksum_match = checksum_checker(
+        current_checksum=current_checksum,
+        company=company,
+        api_type=Checksum.TYPE_SUBMISSIONS,
+    )
+    if not checksum_match:
         process_submissions(company=company, filing_data=filing_data)
-        Checksum.objects.update_or_create(
-            company=company,
-            api_type=Checksum.TYPE_SUBMISSIONS,
-            defaults={"checksum": new_checksum},
-        )
 
         if extra_files:
             extra_file_list = data["filings"]["files"]
@@ -49,7 +44,7 @@ def save_new_filing(url):
                 process_submissions(company=company, filing_data=data)
 
 
-def process_submissions(company, filing_data):
+def process_submissions(company: Company, filing_data: dict):
     form_list = filing_data["form"]
     report_date_list = filing_data["reportDate"]
     filing_date_list = filing_data["filingDate"]

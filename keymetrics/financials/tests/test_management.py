@@ -1,17 +1,22 @@
 import json
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 import requests
 from django.core.management import call_command
 
 import keymetrics.financials.management.commands._call_sec_api as call_api
+from keymetrics.financials.management.commands._checksum_checker import checksum_checker
 from keymetrics.financials.management.commands.load_companies import save_company_data
 from keymetrics.financials.management.commands.load_financial_facts import (
     process_dates,
     save_new_financial_concepts,
     save_new_financial_facts,
     save_new_time_dimensions,
+)
+from keymetrics.financials.management.commands.update_tracked_companies import (
+    reset_tracked_companies,
+    update_tracked_companies,
 )
 from keymetrics.financials.models import (
     Company,
@@ -22,9 +27,11 @@ from keymetrics.financials.models import (
 )
 
 from .factories import (
+    ChecksumFactory,
     CompanyFactory,
     FilingFactory,
     FinancialConceptFactory,
+    TickerFactory,
     TimeDimensionFactory,
 )
 
@@ -225,14 +232,35 @@ class MockFactResponse:
 
 
 def test_save_new_financial_concepts():
+    """Test management command function that adds financial concepts"""
     gaap_data = MockFactResponse.json()["facts"]["us-gaap"]
     save_new_financial_concepts(gaap_data)
     concepts = FinancialConcept.objects.all()
     assert len(concepts) == 1
 
 
-def test_save_new_time_dimensions():
+def test_save_new_financial_concepts_if_doesnt_exist():
+    """Test management command function that adds financial concepts only if new."""
     gaap_data = MockFactResponse.json()["facts"]["us-gaap"]
+    save_new_financial_concepts(gaap_data)
+    save_new_financial_concepts(gaap_data)
+    concepts = FinancialConcept.objects.all()
+    assert len(concepts) == 1
+
+
+def test_save_new_time_dimensions():
+    """Test management command function that adds new time dimensions"""
+    gaap_data = MockFactResponse.json()["facts"]["us-gaap"]
+    save_new_time_dimensions(gaap_data)
+    time_dimensions = TimeDimension.objects.all()
+    assert len(time_dimensions) == 1
+    assert time_dimensions[0].key == "2020-04-30"
+
+
+def test_save_new_time_dimensions_if_doesnt_exist():
+    """Test management command function that adds new time dimensions only if new"""
+    gaap_data = MockFactResponse.json()["facts"]["us-gaap"]
+    save_new_time_dimensions(gaap_data)
     save_new_time_dimensions(gaap_data)
     time_dimensions = TimeDimension.objects.all()
     assert len(time_dimensions) == 1
@@ -250,7 +278,9 @@ def test_save_new_financial_facts():
 
 
 @patch("keymetrics.financials.management.commands.load_financial_facts.get_sec_data")
-def test_load_financial_facts_command(mock_sec_get_data):
+def test_load_financial_facts_command(mock_sec_get_data: Mock):
+    """Test entire financial fact management command (Loads TimeDimensions,
+    Financial Concepts as well as FinancialFacts"""
     response_data = MockFactResponse.json()
     company = CompanyFactory(CIK=1111111, name="Fake.ai")
     FilingFactory(company=company, accn_num="0001111111-11-111111")
@@ -259,3 +289,65 @@ def test_load_financial_facts_command(mock_sec_get_data):
     facts = FinancialFact.objects.all()
     assert len(facts) == 1
     assert facts[0].value == 4726000
+
+
+@patch("keymetrics.financials.management.commands.load_financial_facts.get_sec_data")
+def test_load_financial_facts_command_doesnt_add_new_if_checksum_matches(
+    mock_sec_get_data: Mock,
+):
+    """Tests checksum checking logic, no new objects created if checksum matches from beginning"""
+
+    response_data = MockFactResponse.json()
+    company = CompanyFactory(CIK=1111111, name="Fake.ai")
+    FilingFactory(company=company, accn_num="0001111111-11-111111")
+    ChecksumFactory(company=company, api_type="F", checksum="abc123")
+    mock_sec_get_data.return_value = {"data": response_data, "checksum": "abc123"}
+    call_command("load_financial_facts")
+    facts = FinancialFact.objects.all()
+    assert len(facts) == 0
+
+
+def test_reset_tracked_companies(company: Company):
+    """Test management command for resetting tracked companies"""
+    tracked_companies = Company.objects.filter(istracked=True)
+    assert len(tracked_companies) == 1
+    reset_tracked_companies()
+    tracked_companies = Company.objects.filter(istracked=True)
+    assert len(tracked_companies) == 0
+
+
+def test_update_tracked_companies():
+    """Test management command for updating tracked companies"""
+    company1 = CompanyFactory(istracked=False)
+    company2 = CompanyFactory(istracked=False)
+    ticker1 = TickerFactory(company=company1)
+    TickerFactory(company=company2)
+
+    tracked_company_list = [ticker1.ticker]
+    update_tracked_companies(tracked_company_list)
+
+    tracked_companies = Company.objects.filter(istracked=True)
+    assert len(tracked_companies) == 1
+    assert tracked_companies[0] == company1
+
+
+def test_checksum_checker_returns_true_if_match():
+    company = CompanyFactory(CIK=1111111, name="Fake.ai")
+    FilingFactory(company=company, accn_num="0001111111-11-111111")
+    ChecksumFactory(company=company, api_type="F", checksum="abc123")
+    current_checksum = "abc123"
+    match = checksum_checker(
+        current_checksum=current_checksum, company=company, api_type="F"
+    )
+    assert match is True
+
+
+def test_checksum_checker_returns_false_if_no_match():
+    company = CompanyFactory(CIK=1111111, name="Fake.ai")
+    FilingFactory(company=company, accn_num="0001111111-11-111111")
+    ChecksumFactory(company=company, api_type="F", checksum="11111")
+    current_checksum = "abc123"
+    match = checksum_checker(
+        current_checksum=current_checksum, company=company, api_type="F"
+    )
+    assert match is False
