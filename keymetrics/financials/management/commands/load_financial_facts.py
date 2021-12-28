@@ -1,3 +1,5 @@
+import logging
+
 from dateutil import parser
 from django.core.management.base import BaseCommand
 from django.db.utils import IntegrityError
@@ -14,6 +16,8 @@ from keymetrics.financials.models import (
 from ._call_sec_api import get_sec_data
 from ._checksum_checker import checksum_checker
 from ._measure import measure
+
+logger = logging.getLogger(__name__)
 
 
 @measure
@@ -104,18 +108,23 @@ def save_new_financial_facts(gaap_data: dict, company: Company):
         for unit, instance in value["units"].items():
             for entries in instance:
                 dates = process_dates(entries)
-                filing = filings.get(accn_num=entries["accn"])
-                concept = concepts.get(tag=key)
-                period = time_dimensions.get(key=dates["time_key"])
-                if entries["accn"] not in existing_filings:
-                    obj = FinancialFact(
-                        company=company,
-                        filing=filing,
-                        concept=concept,
-                        period=period,
-                        value=int(entries["val"]),
-                    )
-                    obj_list.append(obj)
+                if entries["form"] not in ["8-K", "8-K/A"]:
+                    try:
+                        filing = filings.get(accn_num=entries["accn"])
+                    except Filing.DoesNotExist as e:
+                        print(entries["accn"])
+                        logger.error(f'Accn {entries["accn"]} does not exist {e}')
+                    concept = concepts.get(tag=key)
+                    period = time_dimensions.get(key=dates["time_key"])
+                    if entries["accn"] not in existing_filings:
+                        obj = FinancialFact(
+                            company=company,
+                            filing=filing,
+                            concept=concept,
+                            period=period,
+                            value=int(entries["val"]),
+                        )
+                        obj_list.append(obj)
     FinancialFact.objects.bulk_create(obj_list, ignore_conflicts=True)
 
 

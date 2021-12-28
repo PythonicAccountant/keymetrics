@@ -11,7 +11,7 @@ SECRET_KEY = env(
     default="WRBVfeNClDlO0nJet8l9DYgNFTcGdxBSXjiJCZ8XndBPanvKlX91IBlCF44wj5nD",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "192.168.1.27"]
 
 # CACHES
 # ------------------------------------------------------------------------------
@@ -62,3 +62,18 @@ INSTALLED_APPS += ["django_extensions"]  # noqa F405
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "app_api": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}
