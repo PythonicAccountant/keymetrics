@@ -1,10 +1,10 @@
 from django.core.management.base import BaseCommand
 
-from keymetrics.financials.models import TimeDimension
+from keymetrics.financials.models import Filing
 
 
 def delete_data():
-    TimeDimension.objects.all().delete()
+    Filing.objects.all().delete()
 
 
 class Command(BaseCommand):
