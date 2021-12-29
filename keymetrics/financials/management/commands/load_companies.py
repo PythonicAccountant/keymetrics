@@ -6,6 +6,10 @@ from ._call_sec_api import get_sec_data
 
 
 def save_company_data():
+    """
+    Bulk create new Company objects based on SEC Company Tickers JSON file
+
+    """
     url = "https://www.sec.gov/files/company_tickers.json"
     resp = get_sec_data(url)
     data = resp["data"]
@@ -24,6 +28,11 @@ def save_company_data():
 
 
 def save_ticker_data(data: dict):
+    """
+    Adds Ticker objects based on previously added Company data & SEC Data
+    :param data: SEC Data dict
+    """
+
     companies = Company.objects.all()
 
     objs_list = []

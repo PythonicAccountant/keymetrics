@@ -12,6 +12,12 @@ limiter = Limiter(RequestRate(10, Duration.SECOND))
 
 @limiter.ratelimit("SEC", delay=True)
 def get_sec_data(url: str) -> Optional[dict]:
+    """
+    Get SEC API data and checksum given a URL
+
+    :param url: URL of SEC API
+    :return: Dictionary of response data (JSON) and MD5 checksum of the JSON content
+    """
 
     try:
         headers = {"User-Agent": env("SEC_API_USER_AGENT")}

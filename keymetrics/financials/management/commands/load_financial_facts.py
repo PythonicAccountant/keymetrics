@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 @measure
 def fetch_sec_data():
+    """
+    Queries DB for all tracked Companies and compiles list of URL's to call
+    """
     obs = Company.objects.filter(istracked=True)
     url_list = [c.sec_facts_url for c in obs]
     for url in url_list:
@@ -29,6 +32,11 @@ def fetch_sec_data():
 
 
 def save_new_data(url: str):
+    """
+    Checks if SEC API data received is new and if so calls save new data functions
+
+    :param url: SEC API URL
+    """
     resp = get_sec_data(url)
     data = resp["data"]
     current_checksum = resp["checksum"]
@@ -47,6 +55,11 @@ def save_new_data(url: str):
 
 @measure
 def save_new_financial_concepts(gaap_data: dict):
+    """
+    Saves new Financial Concepts if they do not already exist
+
+    :param gaap_data: SEC data from "us-gaap" key
+    """
     for key, value in gaap_data.items():
         if not FinancialConcept.objects.filter(tag=key).exists():
             for unit, instance in value["units"].items():
@@ -73,6 +86,11 @@ def save_new_financial_concepts(gaap_data: dict):
 
 @measure
 def save_new_time_dimensions(gaap_data: dict):
+    """
+    Saves new Time Dimensions if they do not already exist
+
+    :param gaap_data: SEC data from "us-gaap" key
+    """
     existing_dimensions_objs = TimeDimension.objects.all()
     existing_dimensions_key_list = [t.key for t in existing_dimensions_objs]
 
@@ -95,6 +113,13 @@ def save_new_time_dimensions(gaap_data: dict):
 
 @measure
 def save_new_financial_facts(gaap_data: dict, company: Company):
+    """
+    Saves new Financial Facts for a given Company
+
+    :param gaap_data: SEC data from "us-gaap" key
+    :param company: Company model object the fact relates to
+    :return:
+    """
     existing_facts = FinancialFact.objects.select_related("filing").filter(
         company=company
     )
@@ -129,6 +154,14 @@ def save_new_financial_facts(gaap_data: dict, company: Company):
 
 
 def process_dates(data: dict) -> dict:
+    """
+    Financial fact data from API always has "end" date. Only has start date if it is for a time
+    range. This function also approximately calculates how many months a time range is given the start
+    and end dates.
+
+    :param data: Dictionary for an individual financial fact from the API/US-GAAP data
+    :return: Dictionary with the dates as well as an appro
+    """
     start = None
     num_months = None
     end = data["end"]
