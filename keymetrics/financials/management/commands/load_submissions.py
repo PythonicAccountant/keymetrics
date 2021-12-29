@@ -8,6 +8,9 @@ from ._measure import measure
 
 
 def fetch_sec_data():
+    """
+    Queries DB for all tracked Companies and compiles list of URL's to call
+    """
     obs = Company.objects.filter(istracked=True)
     url_list = [c.sec_submissions_url for c in obs]
     for url in url_list:
@@ -16,6 +19,12 @@ def fetch_sec_data():
 
 @measure
 def save_new_filing(url: str):
+    """
+    Checks if SEC API data received is new and if so calls process_submissions function
+
+    :param url: SEC API URL
+    :return: None
+    """
     resp = get_sec_data(url)
     data = resp["data"]
     current_checksum = resp["checksum"]
@@ -34,6 +43,7 @@ def save_new_filing(url: str):
     if not checksum_match:
         process_submissions(company=company, filing_data=filing_data)
 
+        # Submissions API only returns most recent 1000 filings, older companies have more in extra submission files
         if extra_files:
             extra_file_list = data["filings"]["files"]
             file_names = [x["name"] for x in extra_file_list]
@@ -45,6 +55,13 @@ def save_new_filing(url: str):
 
 
 def process_submissions(company: Company, filing_data: dict):
+    """
+    Adds all 10-K/10-Q (and amended versions) from the SEC API data
+
+    :param company: Company model object
+    :param filing_data:
+    :return: None
+    """
     form_list = filing_data["form"]
     report_date_list = filing_data["reportDate"]
     filing_date_list = filing_data["filingDate"]
