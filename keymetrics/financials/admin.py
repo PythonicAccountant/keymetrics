@@ -3,6 +3,7 @@ from django.contrib import admin
 import keymetrics.financials.models as m
 
 admin.site.register(m.TimeDimension)
+admin.site.register(m.ConceptAlias)
 
 
 class TickerInline(admin.StackedInline):
@@ -16,10 +17,14 @@ class CompanyAdmin(admin.ModelAdmin):
     search_fields = ["tickers__ticker", "name"]
     readonly_fields = ["sec_submissions_url", "sec_facts_url"]
     fieldsets = (
-        (None, {"fields": ("name", "CIK", "istracked")}),
+        (None, {"fields": ("name", "CIK", "fiscal_year_end", "istracked")}),
         ("SEC URLS", {"fields": ("sec_submissions_url", "sec_facts_url")}),
     )
     inlines = [TickerInline]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request).prefetch_related("tickers")
+        return queryset
 
 
 @admin.register(m.FinancialConcept)

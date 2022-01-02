@@ -7,13 +7,14 @@ from django.utils.translation import gettext_lazy as _
 class Company(models.Model):
     name = models.CharField(max_length=255)
     CIK = models.IntegerField(unique=True)
+    fiscal_year_end = models.CharField(max_length=10, blank=True, null=True)
     istracked = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = "companies"
 
     def __str__(self):
-        return f"{self.name} {self.tickers.paren_ticker_list}"
+        return f"{self.name}"
 
     @property
     def zero_padded_cik(self):
@@ -81,6 +82,13 @@ class Filing(models.Model):
         return f"{self.company} - {self.type} - {self.report_date}"
 
 
+class ConceptAlias(models.Model):
+    name = models.CharField(_("Alias Name"), max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class FinancialConcept(models.Model):
     TYPE_AS_OF = "ao"
     TYPE_PERIOD_ENDED = "pe"
@@ -90,6 +98,13 @@ class FinancialConcept(models.Model):
         (TYPE_PERIOD_ENDED, "Period ended"),
     ]
 
+    alias = models.ForeignKey(
+        ConceptAlias,
+        on_delete=models.PROTECT,
+        related_name="xbrl_concepts",
+        null=True,
+        blank=True,
+    )
     tag = models.CharField(_("XBRL Tag"), max_length=255, unique=True)
     name = models.CharField(_("Financial Concept Name"), max_length=255)
     description = models.TextField(_("Concept Description"))
@@ -112,9 +127,75 @@ class TimeDimension(models.Model):
         else:
             return f"{self.months} months ended {self.end_date}"
 
+    @property
+    def date_display_str(self) -> str:
+        str_date = self.end_date.strftime("%b %Y")
+        return str_date
+
+    class Meta:
+        ordering = ["-end_date"]
+
+
+class FactQuerySet(models.QuerySet):
+    def select_all_related(self):
+        return self.select_related(
+            "filing",
+            "concept",
+            "period",
+            "concept__alias",
+        )
+
+    def has_alias(self):
+        return self.exclude(concept__alias__isnull=True)
+
+    def annual_period(self):
+        return self.filter(period__months=12)
+
+    def quarterly_period(self):
+        return self.filter(period__months=3)
+
+    def for_period(self, period: str = "annual"):
+        """
+
+        :param period: annual or quarter
+        :return:
+        """
+        period_types = ["annual", "quarter"]
+        period_dict = {"annual": 12, "quarter": 3}
+        type_dict = {
+            "annual": FinancialFact.TYPE_ANNUAL,
+            "quarter": FinancialFact.TYPE_QUARTER,
+        }
+        if period not in period_types:
+            raise ValueError(f"Invalid period type. Expected one of {period_types}")
+        return self.filter(period__months=period_dict[period]).filter(
+            type=type_dict[period]
+        ) | self.filter(period__months__isnull=True).filter(type=type_dict[period])
+
+    def for_company(self, company: Company):
+        return self.filter(company=company)
+
+    # def as_amended(self):
+    #     """
+    #     If the same financial fact exists under 10-K/A or 10-Q/A then use that (as amended)
+    #     :return:
+    #     """
+    #     # return self.filter(period__months=12)
+    #     return self.values('concept', 'period').annotate(count=Count('id'))
+    #
+    #
+
 
 class FinancialFact(models.Model):
     """ """
+
+    TYPE_ANNUAL = "a"
+    TYPE_QUARTER = "q"
+
+    TYPE_CHOICES = [
+        (TYPE_ANNUAL, "Annual"),
+        (TYPE_QUARTER, "Quarter"),
+    ]
 
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="financial_facts"
@@ -129,9 +210,25 @@ class FinancialFact(models.Model):
         TimeDimension, on_delete=models.CASCADE, related_name="financial_facts"
     )
     value = models.BigIntegerField()
+    type = models.CharField(max_length=1, choices=TYPE_CHOICES)
+    objects = FactQuerySet.as_manager()
 
     def __str__(self):
         return f"{self.company} - {self.concept} - {self.period}"
+
+    @property
+    def round_value(self):
+        if 1000 <= self.value < 1000000:
+            round_value = round(self.value / 1000, 1)
+            return f"{round_value:,}K"
+
+        elif 1000000 <= self.value < 1000000000:
+            round_value = round(self.value / 1000000, 1)
+            return f"{round_value:,}M"
+
+        elif 1000000000 <= self.value < 1000000000000:
+            round_value = round(self.value / 1000000000, 1)
+            return f"{round_value:,}B"
 
     class Meta:
         constraints = [
@@ -140,6 +237,7 @@ class FinancialFact(models.Model):
                 name="unique financial fact",
             )
         ]
+        ordering = ["-period__end_date"]
 
 
 class Checksum(models.Model):

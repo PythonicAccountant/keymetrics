@@ -134,19 +134,20 @@ def save_new_financial_facts(gaap_data: dict, company: Company):
             for entries in instance:
                 dates = process_dates(entries)
                 if entries["form"] not in ["8-K", "8-K/A"]:
-                    try:
-                        filing = filings.get(accn_num=entries["accn"])
-                    except Filing.DoesNotExist as e:
-                        print(entries["accn"])
-                        logger.error(f'Accn {entries["accn"]} does not exist {e}')
+                    filing = filings.get(accn_num=entries["accn"])
                     concept = concepts.get(tag=key)
                     period = time_dimensions.get(key=dates["time_key"])
                     if entries["accn"] not in existing_filings:
+                        if entries["fp"] == "FY":
+                            fact_type = FinancialFact.TYPE_ANNUAL
+                        else:
+                            fact_type = FinancialFact.TYPE_QUARTER
                         obj = FinancialFact(
                             company=company,
                             filing=filing,
                             concept=concept,
                             period=period,
+                            type=fact_type,
                             value=int(entries["val"]),
                         )
                         obj_list.append(obj)

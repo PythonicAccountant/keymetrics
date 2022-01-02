@@ -29,6 +29,7 @@ def save_new_filing(url: str):
     data = resp["data"]
     current_checksum = resp["checksum"]
     cik = data["cik"]
+    year_end = data["fiscalYearEnd"]
     company = Company.objects.get(CIK=cik)
     filing_data = data["filings"]["recent"]
     extra_files = False
@@ -42,6 +43,7 @@ def save_new_filing(url: str):
     )
     if not checksum_match:
         process_submissions(company=company, filing_data=filing_data)
+        update_fiscal_year_end(company=company, year_end=year_end)
 
         # Submissions API only returns most recent 1000 filings, older companies have more in extra submission files
         if extra_files:
@@ -52,6 +54,12 @@ def save_new_filing(url: str):
                 resp = get_sec_data(url)
                 data = resp["data"]
                 process_submissions(company=company, filing_data=data)
+
+
+def update_fiscal_year_end(company: Company, year_end: str):
+    if company.fiscal_year_end != year_end:
+        company.fiscal_year_end = year_end
+        company.save()
 
 
 def process_submissions(company: Company, filing_data: dict):
