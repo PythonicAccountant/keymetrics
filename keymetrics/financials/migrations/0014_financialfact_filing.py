@@ -7,14 +7,19 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0013_filing_report_date'),
+        ("financials", "0013_filing_report_date"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='financialfact',
-            name='filing',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='financial_facts', to='financials.filing'),
+            model_name="financialfact",
+            name="filing",
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="financial_facts",
+                to="financials.filing",
+            ),
             preserve_default=False,
         ),
     ]

@@ -16,53 +16,66 @@
 
 
 {% regroup facts by concept.alias as alias_list %}
+{#<table class="table">#}
+{#  <thead>#}
+{#  {% for alias in alias_list %}#}
+{#  <tr>#}
+{#  {% if forloop.first %}#}
+{#      <th scope="col">Label</th>#}
+{#      <th scope="col"></th>#}
+{#  {% endif %}#}
+{#    {% for fact in alias.list %}#}
+{#      {% if forloop.parentloop.first %}#}
+{#      <th scope="col">{{ fact.period.date_display_str }}</th>#}
+{#      {% endif %}#}
+{#    {% endfor %}#}
+{#    </tr>#}
+{#  {% endfor %}#}
+{#  </thead>#}
+{#  <tbody>#}
+{#  {% for alias in alias_list %}#}
+{#    <tr>#}
+{#      <th scope="row">{{ alias.grouper }}<th>#}
+{#      {% for fact in alias.list %}#}
+{#      <td>{{ fact.round_value }}</td>#}
+{#      {% endfor %}#}
+{#    </tr>#}
+{#  {% endfor %}#}
+{#  </tbody>#}
+{#</table>#}
+
+    {% for alias in alias_list %}
+      <div class="container">
+	      <h2> {{ alias.grouper }} </h2>
 <table class="table">
   <thead>
-  {% for alias in alias_list %}
   <tr>
-  {% if forloop.first %}
-      <th scope="col">Label</th>
-      <th scope="col"></th>
-  {% endif %}
-    {% for fact in alias.list %}
-      {% if forloop.parentloop.first %}
-      <th scope="col">{{ fact.period.date_display_str }}</th>
-      {% endif %}
-    {% endfor %}
-    </tr>
-  {% endfor %}
+    <th scope="col">Period</th>
+    <th scope="col">Amount</th>
+  </tr>
   </thead>
-  <tbody>
-  {% for alias in alias_list %}
-    <tr>
-      <th scope="row">{{ alias.grouper }}<th>
-      {% for fact in alias.list %}
-      <td>{{ fact.round_value }}</td>
-      {% endfor %}
-    </tr>
+<tbody>
+  {% for fact in alias.list %}
+<tr>
+	  <td>{{ fact.period.date_display_str }}</td>
+	  <td>{{ fact.round_value }}</td>
+	  <td>{{ fact.current_year }}</td>
+	  <td>{{ fact.yoy_delta }}</td>
+	  <td>{{ fact.delta_pct }}</td>
+</tr>
   {% endfor %}
-  </tbody>
+
+</tbody>
+
+
 </table>
-    {{ x }}
+      </div>
+    {% endfor %}
+
 
 
 
     </div>
   </div>
 
-{% if object == request.user %}
-<!-- Action buttons -->
-<div class="row">
-
-  <div class="col-sm-12">
-    <a class="btn btn-primary" href="{% url 'users:update' %}" role="button">My Info</a>
-    <a class="btn btn-primary" href="{% url 'account_email' %}" role="button">E-Mail</a>
-    <!-- Your Stuff: Custom user template urls -->
-  </div>
-
-</div>
-<!-- End Action buttons -->
-{% endif %}
-
-</div>
 {% endblock content %}

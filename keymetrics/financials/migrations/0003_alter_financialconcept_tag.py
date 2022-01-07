@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0002_auto_20211217_0102'),
+        ("financials", "0002_auto_20211217_0102"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='financialconcept',
-            name='tag',
-            field=models.CharField(max_length=255, unique=True, verbose_name='XBRL Tag'),
+            model_name="financialconcept",
+            name="tag",
+            field=models.CharField(
+                max_length=255, unique=True, verbose_name="XBRL Tag"
+            ),
         ),
     ]

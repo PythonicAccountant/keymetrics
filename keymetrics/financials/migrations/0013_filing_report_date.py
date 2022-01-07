@@ -6,14 +6,14 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0012_filing'),
+        ("financials", "0012_filing"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='filing',
-            name='report_date',
-            field=models.DateField(default='2020-01-01'),
+            model_name="filing",
+            name="report_date",
+            field=models.DateField(default="2020-01-01"),
             preserve_default=False,
         ),
     ]

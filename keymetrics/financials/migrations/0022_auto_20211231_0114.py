@@ -7,24 +7,43 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0021_alter_timedimension_key'),
+        ("financials", "0021_alter_timedimension_key"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ConceptAlias',
+            name="ConceptAlias",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True, verbose_name='Alias Name')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        max_length=255, unique=True, verbose_name="Alias Name"
+                    ),
+                ),
             ],
         ),
         migrations.AlterModelOptions(
-            name='timedimension',
-            options={'ordering': ['-end_date']},
+            name="timedimension",
+            options={"ordering": ["-end_date"]},
         ),
         migrations.AddField(
-            model_name='financialconcept',
-            name='alias',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='xbrl_concepts', to='financials.conceptalias'),
+            model_name="financialconcept",
+            name="alias",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="xbrl_concepts",
+                to="financials.conceptalias",
+            ),
         ),
     ]

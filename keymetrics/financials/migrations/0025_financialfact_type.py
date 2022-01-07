@@ -6,14 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0024_company_fiscal_year_end'),
+        ("financials", "0024_company_fiscal_year_end"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='financialfact',
-            name='type',
-            field=models.CharField(choices=[('a', 'Annual'), ('q', 'Quarter')], default='a', max_length=1),
+            model_name="financialfact",
+            name="type",
+            field=models.CharField(
+                choices=[("a", "Annual"), ("q", "Quarter")], default="a", max_length=1
+            ),
             preserve_default=False,
         ),
     ]

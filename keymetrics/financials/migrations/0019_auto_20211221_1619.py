@@ -7,24 +7,47 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0018_auto_20211221_0259'),
+        ("financials", "0018_auto_20211221_0259"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Checksum',
+            name="Checksum",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('api_type', models.CharField(choices=[('S', 'Submission API'), ('F', 'Fact API')], max_length=1)),
-                ('checksum', models.CharField(max_length=100)),
-                ('company', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='checksums', to='financials.company')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "api_type",
+                    models.CharField(
+                        choices=[("S", "Submission API"), ("F", "Fact API")],
+                        max_length=1,
+                    ),
+                ),
+                ("checksum", models.CharField(max_length=100)),
+                (
+                    "company",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="checksums",
+                        to="financials.company",
+                    ),
+                ),
             ],
         ),
         migrations.DeleteModel(
-            name='JSONHash',
+            name="JSONHash",
         ),
         migrations.AddConstraint(
-            model_name='checksum',
-            constraint=models.UniqueConstraint(fields=('company', 'api_type'), name='unique type api per company'),
+            model_name="checksum",
+            constraint=models.UniqueConstraint(
+                fields=("company", "api_type"), name="unique type api per company"
+            ),
         ),
     ]

@@ -7,21 +7,44 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0017_auto_20211220_2138'),
+        ("financials", "0017_auto_20211220_2138"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='JSONHash',
+            name="JSONHash",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('json_type', models.CharField(choices=[('S', 'Submission JSON'), ('F', 'Fact JSON')], max_length=1)),
-                ('md5_hash', models.CharField(max_length=100)),
-                ('company', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='json_hashes', to='financials.company')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "json_type",
+                    models.CharField(
+                        choices=[("S", "Submission JSON"), ("F", "Fact JSON")],
+                        max_length=1,
+                    ),
+                ),
+                ("md5_hash", models.CharField(max_length=100)),
+                (
+                    "company",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="json_hashes",
+                        to="financials.company",
+                    ),
+                ),
             ],
         ),
         migrations.AddConstraint(
-            model_name='jsonhash',
-            constraint=models.UniqueConstraint(fields=('company', 'json_type'), name='unique JSON type per company'),
+            model_name="jsonhash",
+            constraint=models.UniqueConstraint(
+                fields=("company", "json_type"), name="unique JSON type per company"
+            ),
         ),
     ]

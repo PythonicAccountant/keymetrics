@@ -6,20 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0001_initial'),
+        ("financials", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='financialconcept',
-            name='description',
-            field=models.TextField(default=1, verbose_name='Concept Description'),
+            model_name="financialconcept",
+            name="description",
+            field=models.TextField(default=1, verbose_name="Concept Description"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='financialconcept',
-            name='tag',
-            field=models.CharField(default=1, max_length=255, verbose_name='XBRL Tag'),
+            model_name="financialconcept",
+            name="tag",
+            field=models.CharField(default=1, max_length=255, verbose_name="XBRL Tag"),
             preserve_default=False,
         ),
     ]

@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0022_auto_20211231_0114'),
+        ("financials", "0022_auto_20211231_0114"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='financialfact',
-            options={'ordering': ['-period__end_date']},
+            name="financialfact",
+            options={"ordering": ["-period__end_date"]},
         ),
     ]

@@ -1,17 +1,29 @@
-from django.db.models import Count  # , OuterRef, Subquery
+# import pandas as pd
+# from django.db.models import Count  # , OuterRef, Subquery
 from django.template.response import TemplateResponse
 
 from keymetrics.financials.models import Company, FinancialFact
 
-# class CompanyDetailView(DetailView):
+# def company_detail_view(request, ticker: str):
+#     company = Company.objects.get(tickers__ticker=ticker)
+#     all_facts = (
+#         FinancialFact.objects.select_all_related()
+#         .for_company(company=company)
+#         .for_period(period="annual")
+#         .has_alias()
+#         .is_framed()
+#         .order_by("concept__alias__id", "-period__end_date", "-filing__date_filed")
+#         .distinct('concept__alias_id', 'period__end_date'))
+#         # .values('concept__alias__name', 'period__end_date', 'value')
 #
-#     model = Company
-#     slug_field = "tickers__ticker"
-#     slug_url_kwarg = "ticker"
+#     # df = pd.DataFrame(all_facts)
+#     # df = df.pivot(index="concept__alias__name", columns="period__end_date", values="value")
+#     # df = df.reset_index()
+#     # df_h = df.to_html(index=False)
 #
 #
-#
-# company_detail_view = CompanyDetailView.as_view()
+#     context = {"object": company, "facts": all_facts}#, "df_h": df_h}
+#     return TemplateResponse(request, "financials/company_detail.html", context)
 
 
 def company_detail_view(request, ticker: str):
@@ -21,21 +33,18 @@ def company_detail_view(request, ticker: str):
         .for_company(company=company)
         .for_period(period="annual")
         .has_alias()
-        .order_by("concept__alias__id", "-period__end_date")
-    )  # .distinct('concept__alias_id', 'period__end_date')
-    # all_facts = FinancialFact.objects.select_all_related().for_company(company=company).
-    # for_period(period="year").has_alias().order_by('concept__name', '-period__end_date').
-    # distinct('concept__name', 'period__end_date')
-    x = (
-        FinancialFact.objects.for_company(company=company)
-        .for_period("annual")
-        .has_alias()
-        .values("concept__alias", "period")
-        .annotate(a_count=Count("period"))
-        .filter(a_count__gt=2)
-        .order_by()
+        .is_framed()
+        .get_yoy_delta()
+        .calc_delta_pct()
+        .order_by("concept__alias__id", "-period__end_date", "-filing__date_filed")
+        .distinct("concept__alias_id", "period__end_date")
     )
-    # x = FinancialFact.objects.(Subquery(y))
+    # .values('concept__alias__name', 'period__end_date', 'value')
 
-    context = {"object": company, "facts": all_facts, "x": x}
+    # df = pd.DataFrame(all_facts)
+    # df = df.pivot(index="concept__alias__name", columns="period__end_date", values="value")
+    # df = df.reset_index()
+    # df_h = df.to_html(index=False)
+
+    context = {"object": company, "facts": all_facts}  # , "df_h": df_h}
     return TemplateResponse(request, "financials/company_detail.html", context)

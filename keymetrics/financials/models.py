@@ -1,6 +1,9 @@
 import hashlib
+from decimal import Decimal
 
 from django.db import models
+from django.db.models import Case, Count, F, OuterRef, Q, Subquery, When
+from django.db.models.functions import Cast, ExtractMonth, ExtractYear
 from django.utils.translation import gettext_lazy as _
 
 
@@ -63,12 +66,16 @@ class Filing(models.Model):
     TYPE_10K = "10-K"
     TYPE_10Q_A = "10-Q/A"
     TYPE_10K_A = "10-K/A"
+    TYPE_8K = "8-K"
+    TYPE_8K_A = "8-K/A"
 
     TYPE_CHOICES = [
         (TYPE_10Q, "10-Q"),
         (TYPE_10K, "10-K"),
         (TYPE_10Q_A, "10-Q/A"),
         (TYPE_10K_A, "10-K/A"),
+        (TYPE_8K, "8-K"),
+        (TYPE_8K_A, "8-K/A"),
     ]
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="filings"
@@ -175,8 +182,75 @@ class FactQuerySet(models.QuerySet):
     def for_company(self, company: Company):
         return self.filter(company=company)
 
+    def latest_fact(self):
+        query = (
+            ConceptAlias.objects
+            # .filter(xbrl_concepts=OuterRef("concept"))
+            .order_by("xbrl_concepts__financial_facts__filing__date_filed").values(
+                "xbrl_concepts__financial_facts__filing_id"
+            )
+        )
+        return self.annotate(latest=Subquery(query[:1])).filter(filing_id=F("latest"))
+
+    def add_filing_count(self, company: Company):
+        query = (
+            FinancialFact.objects.filter(
+                Q(concept__alias=OuterRef("concept__alias"))
+                & Q(period=OuterRef("period"))
+                & Q(company=company)
+            )
+            .values("concept__alias", "period")
+            .order_by()
+            .annotate(a_count=Count("*"))
+            .values("a_count")[:1]
+        )
+        return self.annotate(
+            filing_count=Subquery(query, output_field=models.IntegerField())
+        )
+
+    def is_framed(self):
+        return self.filter(is_framed=True)
+
+    def current_year_and_month(self):
+        return self.annotate(
+            current_year=ExtractYear("period__end_date"),
+            last_year=F("current_year") - 1,
+            month=ExtractMonth("period__end_date"),
+        )
+
+    def get_last_year_value(self):
+        query = FinancialFact.objects.filter(
+            period__end_date__month=OuterRef("month"),
+            period__end_date__year=OuterRef("last_year"),
+            concept__alias=OuterRef("concept__alias"),
+            company=OuterRef("company"),
+        ).values("value")[:1]
+        return self.current_year_and_month().annotate(
+            py_value=Subquery(query, output_field=models.BigIntegerField())
+        )
+
+    def get_yoy_delta(self):
+        return self.get_last_year_value().annotate(
+            yoy_delta=Case(
+                When(py_value__isnull=True, then=0),
+                When(py_value__isnull=False, then=(F("value") - F("py_value"))),
+                output_field=models.BigIntegerField(),
+            )
+        )
+
+    def calc_delta_pct(self):
+        return self.get_yoy_delta().annotate(
+            delta_pct=Case(
+                When(yoy_delta__exact=0, then=Decimal(0)),
+                When(yoy_delta__exact="none", then=Decimal(0)),
+                default=Cast(
+                    (F("yoy_delta") / F("py_value")), output_field=models.DecimalField()
+                ),
+                output_field=models.DecimalField(),
+            )
+        )
+
     # def as_amended(self):
-    #     """
     #     If the same financial fact exists under 10-K/A or 10-Q/A then use that (as amended)
     #     :return:
     #     """
@@ -211,6 +285,7 @@ class FinancialFact(models.Model):
     )
     value = models.BigIntegerField()
     type = models.CharField(max_length=1, choices=TYPE_CHOICES)
+    is_framed = models.BooleanField(default=False)
     objects = FactQuerySet.as_manager()
 
     def __str__(self):
@@ -233,7 +308,7 @@ class FinancialFact(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["company", "concept", "period", "value"],
+                fields=["company", "concept", "filing", "period", "value"],
                 name="unique financial fact",
             )
         ]

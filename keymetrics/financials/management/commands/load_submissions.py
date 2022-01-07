@@ -75,7 +75,9 @@ def process_submissions(company: Company, filing_data: dict):
     filing_date_list = filing_data["filingDate"]
     accn_list = filing_data["accessionNumber"]
     indices = [
-        i for i, x in enumerate(form_list) if x in ["10-K", "10-Q", "10-K/A", "10-Q/A"]
+        i
+        for i, x in enumerate(form_list)
+        if x in ["10-K", "10-Q", "10-K/A", "10-Q/A", "8-K", "8-K/A"]
     ]
     obj_list = []
     for index in indices:

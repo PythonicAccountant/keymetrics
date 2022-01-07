@@ -7,18 +7,25 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0006_auto_20211217_0804'),
+        ("financials", "0006_auto_20211217_0804"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='financialfact',
-            name='company',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='financial_facts', to='financials.company'),
+            model_name="financialfact",
+            name="company",
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="financial_facts",
+                to="financials.company",
+            ),
             preserve_default=False,
         ),
         migrations.AddConstraint(
-            model_name='financialfact',
-            constraint=models.UniqueConstraint(fields=('company', 'concept', 'period'), name='unique financial fact'),
+            model_name="financialfact",
+            constraint=models.UniqueConstraint(
+                fields=("company", "concept", "period"), name="unique financial fact"
+            ),
         ),
     ]

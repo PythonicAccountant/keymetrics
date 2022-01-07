@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0004_timedimension_key'),
+        ("financials", "0004_timedimension_key"),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='timedimension',
-            name='unique_time_dimension',
+            model_name="timedimension",
+            name="unique_time_dimension",
         ),
         migrations.AlterField(
-            model_name='timedimension',
-            name='key',
+            model_name="timedimension",
+            name="key",
             field=models.CharField(max_length=50, unique=True),
         ),
     ]

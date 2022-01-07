@@ -7,18 +7,22 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0015_auto_20211220_2045'),
+        ("financials", "0015_auto_20211220_2045"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='company',
-            name='ticker',
+            model_name="company",
+            name="ticker",
         ),
         migrations.AddField(
-            model_name='ticker',
-            name='company',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tickers', to='financials.company'),
+            model_name="ticker",
+            name="company",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="tickers",
+                to="financials.company",
+            ),
             preserve_default=False,
         ),
     ]

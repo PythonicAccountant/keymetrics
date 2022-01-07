@@ -120,10 +120,10 @@ def save_new_financial_facts(gaap_data: dict, company: Company):
     :param company: Company model object the fact relates to
     :return:
     """
-    existing_facts = FinancialFact.objects.select_related("filing").filter(
-        company=company
-    )
-    existing_filings = [f.filing.accn_num for f in existing_facts]
+    # existing_facts = FinancialFact.objects.select_related("filing").filter(
+    #     company=company
+    # )
+    # existing_filings = [f.filing.accn_num for f in existing_facts]
     filings = Filing.objects.filter(company=company)
     concepts = FinancialConcept.objects.all()
     time_dimensions = TimeDimension.objects.all()
@@ -133,25 +133,49 @@ def save_new_financial_facts(gaap_data: dict, company: Company):
         for unit, instance in value["units"].items():
             for entries in instance:
                 dates = process_dates(entries)
-                if entries["form"] not in ["8-K", "8-K/A"]:
-                    filing = filings.get(accn_num=entries["accn"])
-                    concept = concepts.get(tag=key)
-                    period = time_dimensions.get(key=dates["time_key"])
-                    if entries["accn"] not in existing_filings:
-                        if entries["fp"] == "FY":
-                            fact_type = FinancialFact.TYPE_ANNUAL
-                        else:
-                            fact_type = FinancialFact.TYPE_QUARTER
-                        obj = FinancialFact(
-                            company=company,
-                            filing=filing,
-                            concept=concept,
-                            period=period,
-                            type=fact_type,
-                            value=int(entries["val"]),
-                        )
-                        obj_list.append(obj)
-    FinancialFact.objects.bulk_create(obj_list, ignore_conflicts=True)
+                filing = filings.get(accn_num=entries["accn"])
+                concept = concepts.get(tag=key)
+                period = time_dimensions.get(key=dates["time_key"])
+                fact_type = get_fact_type(data=entries, dates=dates, company=company)
+                framed = get_is_framed(entries)
+                obj = FinancialFact(
+                    company=company,
+                    filing=filing,
+                    concept=concept,
+                    period=period,
+                    type=fact_type,
+                    is_framed=framed,
+                    value=int(entries["val"]),
+                )
+                obj_list.append(obj)
+    FinancialFact.objects.bulk_create(obj_list, ignore_conflicts=False)
+
+
+def get_fact_type(data: dict, dates: dict, company: Company) -> str:
+    fact_type = None
+    fiscal_year_end = int(company.fiscal_year_end)
+    end_dt = parser.parse(data["end"])
+    end_int = int(end_dt.strftime("%m%d"))
+
+    if dates["num_months"] == 12:
+        fact_type = FinancialFact.TYPE_ANNUAL
+
+    elif dates["num_months"] is None:
+        if fiscal_year_end - 7 < end_int < fiscal_year_end + 7:
+            fact_type = FinancialFact.TYPE_ANNUAL
+        else:
+            fact_type = FinancialFact.TYPE_QUARTER
+    else:
+        fact_type = FinancialFact.TYPE_QUARTER
+
+    return fact_type
+
+
+def get_is_framed(data: dict) -> bool:
+    if "frame" in data:
+        return True
+    else:
+        return False
 
 
 def process_dates(data: dict) -> dict:

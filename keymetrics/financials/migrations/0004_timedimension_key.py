@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('financials', '0003_alter_financialconcept_tag'),
+        ("financials", "0003_alter_financialconcept_tag"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='timedimension',
-            name='key',
+            model_name="timedimension",
+            name="key",
             field=models.CharField(default=1, max_length=50),
             preserve_default=False,
         ),

@@ -48,7 +48,7 @@ DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TEMPLATE_CONTEXT": True,
 }
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
-INTERNAL_IPS = ["127.0.0.1", "10.0.2.2", "192.168.1.223"]
+INTERNAL_IPS = ["127.0.0.1", "10.0.2.2", "192.168.1.223", "192.168.1.6"]
 if env("USE_DOCKER") == "yes":
     import socket
 
