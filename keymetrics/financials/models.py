@@ -1,10 +1,17 @@
 import hashlib
-from decimal import Decimal
+from datetime import timedelta
 
 from django.db import models
 from django.db.models import Case, Count, F, OuterRef, Q, Subquery, When
-from django.db.models.functions import Cast, ExtractMonth, ExtractYear
+from django.db.models.functions import ExtractMonth, ExtractYear
 from django.utils.translation import gettext_lazy as _
+
+
+class CompanyQuerySet(models.QuerySet):
+    def company_search(self, search):
+        return self.filter(
+            Q(name__icontains=search) | Q(tickers__ticker__icontains=search)
+        ).distinct()
 
 
 class Company(models.Model):
@@ -12,6 +19,7 @@ class Company(models.Model):
     CIK = models.IntegerField(unique=True)
     fiscal_year_end = models.CharField(max_length=10, blank=True, null=True)
     istracked = models.BooleanField(default=False)
+    objects = CompanyQuerySet.as_manager()
 
     class Meta:
         verbose_name_plural = "companies"
@@ -218,15 +226,52 @@ class FactQuerySet(models.QuerySet):
             month=ExtractMonth("period__end_date"),
         )
 
-    def get_last_year_value(self):
-        query = FinancialFact.objects.filter(
-            period__end_date__month=OuterRef("month"),
-            period__end_date__year=OuterRef("last_year"),
-            concept__alias=OuterRef("concept__alias"),
-            company=OuterRef("company"),
-        ).values("value")[:1]
+    def get_last_year_value_bak(self):
+        query = (
+            FinancialFact.objects.filter(
+                period__end_date__month=OuterRef("month"),
+                period__end_date__year=OuterRef("last_year"),
+                concept__alias=OuterRef("concept__alias"),
+                company=OuterRef("company"),
+            )
+            .is_framed()
+            .values("value")[:1]
+        )
         return self.current_year_and_month().annotate(
             py_value=Subquery(query, output_field=models.BigIntegerField())
+        )
+
+    def get_last_year_value(self):
+        query = (
+            FinancialFact.objects.filter(
+                period__end_date__gte=OuterRef("period__end_date")
+                - timedelta(days=395),
+                period__end_date__lte=OuterRef("period__end_date")
+                - timedelta(days=335),
+                concept__alias=OuterRef("concept__alias"),
+                company=OuterRef("company"),
+            )
+            .is_framed()
+            .for_period("annual")
+            .values("value")[:1]
+        )
+        return self.current_year_and_month().annotate(
+            py_value=Subquery(query, output_field=models.BigIntegerField())
+        )
+
+    def get_last_quarter_value(self):
+        query = (
+            FinancialFact.objects.filter(
+                period__end_date__gte=OuterRef("period__end_date") - timedelta(days=95),
+                period__end_date__lte=OuterRef("period__end_date") - timedelta(days=85),
+                concept__alias=OuterRef("concept__alias"),
+                company=OuterRef("company"),
+            )
+            .for_period("quarter")
+            .values("value")[:1]
+        )
+        return self.annotate(
+            pq_value=Subquery(query, output_field=models.BigIntegerField())
         )
 
     def get_yoy_delta(self):
@@ -240,24 +285,38 @@ class FactQuerySet(models.QuerySet):
 
     def calc_delta_pct(self):
         return self.get_yoy_delta().annotate(
-            delta_pct=Case(
-                When(yoy_delta__exact=0, then=Decimal(0)),
-                When(yoy_delta__exact="none", then=Decimal(0)),
-                default=Cast(
-                    (F("yoy_delta") / F("py_value")), output_field=models.DecimalField()
-                ),
-                output_field=models.DecimalField(),
+            delta_pct=F("yoy_delta") * 100 / F("py_value")
+        )
+
+    def get_qoq_delta(self):
+        return self.get_last_quarter_value().annotate(
+            qoq_delta=Case(
+                When(pq_value__isnull=True, then=0),
+                When(pq_value__isnull=False, then=(F("value") - F("pq_value"))),
+                output_field=models.BigIntegerField(),
             )
         )
 
-    # def as_amended(self):
-    #     If the same financial fact exists under 10-K/A or 10-Q/A then use that (as amended)
-    #     :return:
-    #     """
-    #     # return self.filter(period__months=12)
-    #     return self.values('concept', 'period').annotate(count=Count('id'))
-    #
-    #
+    def calc_delta_pct_quarter(self):
+        return self.get_qoq_delta().annotate(
+            delta_pct=F("qoq_delta") * 100 / F("pq_value")
+        )
+
+    def distinct_fact_for_period(self):
+        return self.order_by(
+            "concept__alias__id", "-period__end_date", "-filing__date_filed"
+        ).distinct("concept__alias_id", "period__end_date")
+
+    def annual_data_with_yoy_delta(self):
+        return (
+            self.select_all_related()
+            .for_period(period="annual")
+            .has_alias()
+            .is_framed()
+            .get_yoy_delta()
+            .calc_delta_pct()
+            .distinct_fact_for_period()
+        )
 
 
 class FinancialFact(models.Model):

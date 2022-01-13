@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Filing List{% endblock %}
+
+{% block content %}
+	<div id="t1" class="content">
+		<div class="container-fluid">
+
+			<div class="table-responsive">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Form</th>
+							<th>Company</th>
+							<th>Date Filed</th>
+							<th>Report Date</th>
+							<th>Fact Count</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for filing in page_obj %}
+							<tr>
+								<th> {{ filing.get_type_display }} </th>
+								<td> <a href="{% url 'financials:detail' ticker=filing.company.tickers.first.ticker %}"> {{ filing.company.name }} </a></td>
+								<td> {{ filing.date_filed }} </td>
+								<td> {{ filing.report_date }} </td>
+								<td> {{ filing.fact_count }} </td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+
+
+
+
+
+
+			<div class="pagination">
+				<span class="step-links">
+					{% if page_obj.has_previous %}
+						<a hx-get="?page=1"
+							 hx-select="#t1"
+							 hx-target="#t1"
+							 hx-push-url="true"
+							 hx-swap="outerHTML"
+							>&laquo; first</a>
+						<a hx-get="?page={{ page_obj.previous_page_number }}"
+							 hx-select="#t1"
+							 hx-target="#t1"
+							 hx-push-url="true"
+							 hx-swap="outerHTML"
+							 >previous</a>
+					{% endif %}
+					<span class="current">
+						Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+					</span>
+
+					{% if page_obj.has_next %}
+						<a hx-get="?page={{ page_obj.next_page_number }}"
+							 hx-select="#t1"
+							 hx-target="#t1"
+							 hx-push-url="true"
+							 hx-swap="outerHTML"
+							>
+							next</a>
+						<a hx-get="?page={{ page_obj.paginator.num_pages }}"
+							 hx-select="#t1"
+							 hx-target="#t1"
+							 hx-push-url="true"
+							 hx-swap="outerHTML"
+							>last &raquo;</a>
+					{% endif %}
+				</span>
+			</div>
+
+
+
+		</div>
+
+	{% endblock content %}

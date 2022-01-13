@@ -1,0 +1,86 @@
+<div>
+  <div class="row row-eq-spacing">
+				{% for company in page_obj %}
+				<div class="col-sm-12 col-md-6 col-xl-3">
+					<div class="text-wrap w-300">
+						<div class="card my-10">
+							<h5><a href="{% url 'financials:detail' ticker=company.tickers.first.ticker %}">{{ company.name }}</a></h5>
+							<h6>Tickers: {{ company.tickers.paren_ticker_list }}</h6>
+							<h6>CIK: {{ company.CIK }}</h6>
+						</div>
+					</div>
+        </div>
+			{% endfor %}
+  </div>
+
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav aria-label="Page navigation example">
+  <ul class="pagination text-center">
+    <!-- Previous page -->
+		{% if page_obj.has_previous %}
+			<li class="page-item">
+				<a hx-get="{% url 'financials:list' %}"
+					 hx-target="#company_search_results"
+					 hx-swap="innerHTML"
+					 hx-vals='{"page": {{ page_obj.previous_page_number }}, "search": "{{ search }}"}'
+					class="page-link">
+        <i id="iprev" class="fa fa-angle-left" aria-hidden="true"></i>
+        <span class="sr-only">Previous</span> <!-- sr-only = only for screen readers -->
+      </a>
+    </li>
+	{% else %}
+		    <li class="page-item disabled">
+      <a href="#" class="page-link" tabindex="-1" >
+        <i class="fa fa-angle-left" aria-disabled="true" aria-hidden="true"></i>
+        <span class="sr-only">Previous</span> <!-- sr-only = only for screen readers -->
+      </a>
+    </li>
+
+	{% endif %}
+
+    <!-- Django Elided -->
+    {% for i in page_range|default_if_none:page_obj.paginator.get_elided_page_range %}
+			{% if page_obj.number == i %}
+				<li class="page-item active" aria-current="page">
+					<a href="#" class="page-link" tabindex="-1">{{ i }}</a>
+				</li>
+			{% else %}
+				{% if i == page_obj.paginator.ELLIPSIS %}
+					<li class="page-item ellipsis"></li>
+				{% else %}
+					<li class="page-item"><a hx-get="{% url 'financials:list' %}"
+																	 hx-target="#company_search_results"
+																	 hx-swap="innerHTML"
+																	 hx-vals='{"page": {{ i }}, "search": "{{ search }}"}'
+																	 class="page-link"
+							>{{ i }}</a></li>
+				{% endif %}
+			{% endif %}
+		{% endfor %}
+    <!-- Next page -->
+		{% if page_obj.has_next %}
+			<li class="page-item">
+				<a hx-get="{% url 'financials:list' %}"
+					 hx-target="#company_search_results"
+					 hx-swap="innerHTML"
+					 hx-vals='{"page": {{ page_obj.next_page_number }}, "search": "{{ search }}"}'
+					class="page-link">
+        <i id="iprev" class="fa fa-angle-right" aria-hidden="true"></i>
+        <span class="sr-only">Next</span> <!-- sr-only = only for screen readers -->
+      </a>
+    </li>
+	{% else %}
+		    <li class="page-item disabled">
+      <a href="#" class="page-link" tabindex="-1" >
+        <i class="fa fa-angle-right" aria-disabled="true" aria-hidden="true"></i>
+        <span class="sr-only">Next</span> <!-- sr-only = only for screen readers -->
+      </a>
+    </li>
+
+	{% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+</div>

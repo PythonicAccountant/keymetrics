@@ -12,6 +12,7 @@
       <h2>{{ object.name }}</h2>
       <h2>{{ object.CIK}}</h2>
       <h2>{{ object.tickers.paren_ticker_list}}</h2>
+      <h2>Year End {{ object.fiscal_year_end }}</h2>
 
 
 
@@ -52,6 +53,7 @@
   <tr>
     <th scope="col">Period</th>
     <th scope="col">Amount</th>
+    <th scope="col">Y/Y %</th>
   </tr>
   </thead>
 <tbody>
@@ -59,9 +61,8 @@
 <tr>
 	  <td>{{ fact.period.date_display_str }}</td>
 	  <td>{{ fact.round_value }}</td>
-	  <td>{{ fact.current_year }}</td>
-	  <td>{{ fact.yoy_delta }}</td>
-	  <td>{{ fact.delta_pct }}</td>
+	  <td>{{ fact.delta_pct|default_if_none:0 }}%</td>
+	  <td>{{ fact.pq_value }}</td>
 </tr>
   {% endfor %}
 

@@ -32,8 +32,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         reset_tracked_companies()
         tracked_companies_list = [
+            "AAPL",
             "ADBE",
-            # "AI",
+            "AI",
             # "AKAM",
             # "APPF",
             # "APPN",
@@ -81,7 +82,7 @@ class Command(BaseCommand):
             # "MIME",
             # "MIXT",
             # "MNDY",
-            # "MNTV",
+            "MNTV",
             # "NCNO",
             # "NET",
             # "NEWR",
@@ -123,6 +124,6 @@ class Command(BaseCommand):
             # "ZIP",
             # "ZM",
             # "ZS",
-            # "ZUO",
+            "ZUO",
         ]
         update_tracked_companies(tracked_companies_list)

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Company List{% endblock %}
+
+{% block content %}
+  <div class="content">
+    <div class="container-fluid">
+      <input class="form-control"
+             type="text"
+             name="search"
+             placeholder="Begin Typing To Search Companies..."
+             hx-get="{% url 'financials:list' %}"
+             hx-target="#company_search_results"
+             hx-trigger="keyup changed delay:500ms"
+             hx-push-url="true"
+             >
+
+                                    <div id="company_search_results"
+                                      hx-push-url="true">
+                                      {% include 'financials/company_search_results.html' %}
+                                    </div>
+    </div>
+  </div>
+
+
+
+
+
+
+  </div>
+
+{% endblock content %}
